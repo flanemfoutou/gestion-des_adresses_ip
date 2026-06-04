@@ -1,0 +1,39 @@
+/* View Transition Animations */
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation-duration: 0.25s;
+  animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* Smooth fade-in transition for new views */
+::view-transition-new(root) {
+  animation: fade-in 0.25s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* Smooth fade-out transition for old views */
+::view-transition-old(root) {
+  animation: fade-out 0.25s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}

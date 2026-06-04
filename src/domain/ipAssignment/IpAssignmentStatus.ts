@@ -1,0 +1,1 @@
+export type IpAssignmentStatus = 'assigned' | 'released' | 'failed';

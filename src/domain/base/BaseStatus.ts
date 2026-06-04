@@ -1,0 +1,1 @@
+export type BaseStatus = 'active' | 'inactive' | 'maintenance';

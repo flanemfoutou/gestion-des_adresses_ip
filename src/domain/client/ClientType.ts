@@ -1,0 +1,1 @@
+export type ClientType = 'residential' | 'business' | 'enterprise' | 'iot';

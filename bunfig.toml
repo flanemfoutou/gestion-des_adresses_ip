@@ -1,0 +1,15 @@
+[install]
+ignore = ["node_modules", "dist"]
+
+[serve]
+port = 4000
+watch = ["src"]
+
+[types]
+enable = true
+
+[aliases]
+"@/domain" = "./src/domain"
+"@/application" = "./src/application"
+"@/infrastructure" = "./src/infrastructure"
+"@/presentation" = "./src/presentation"

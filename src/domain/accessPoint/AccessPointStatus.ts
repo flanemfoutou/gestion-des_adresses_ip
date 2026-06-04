@@ -1,0 +1,1 @@
+export type AccessPointStatus = 'online' | 'offline' | 'maintenance';
