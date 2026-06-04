@@ -16,6 +16,12 @@ export class PgClientRepository implements ClientRepository {
     return rows.map(row => this.toDomain(row));
   }
 
+  async findByIpAddressId(ipAddressId: string): Promise<Client | null> {
+    const rows = await db.select().from(clients).where(eq(clients.ipAddressId, ipAddressId)).limit(1);
+    if (!rows[0]) return null;
+    return this.toDomain(rows[0]);
+  }
+
   async search(query: string, limit = 20, offset = 0): Promise<Client[]> {
     const rows = await db
       .select()

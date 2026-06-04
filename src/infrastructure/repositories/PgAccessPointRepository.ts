@@ -33,6 +33,12 @@ export class PgAccessPointRepository implements AccessPointRepository {
       managementIpId: accessPoint.managementIpId,
       baseId: accessPoint.baseId,
       sector: accessPoint.sector,
+      latitude: (accessPoint as any).latitude ?? null,
+      longitude: (accessPoint as any).longitude ?? null,
+      altitude: (accessPoint as any).altitude ?? null,
+      azimuth: (accessPoint as any).azimuth ?? null,
+      tilt: (accessPoint as any).tilt ?? null,
+      beamwidth: (accessPoint as any).beamwidth ?? null,
       status: accessPoint.status,
     };
 
@@ -50,6 +56,12 @@ export class PgAccessPointRepository implements AccessPointRepository {
       baseId: row.baseId,
       sector: row.sector,
       status: row.status,
+      latitude: row.latitude !== null ? Number(row.latitude) : undefined,
+      longitude: row.longitude !== null ? Number(row.longitude) : undefined,
+      altitude: row.altitude !== null ? Number(row.altitude) : undefined,
+      azimuth: row.azimuth !== null ? Number(row.azimuth) : undefined,
+      tilt: row.tilt !== null ? Number(row.tilt) : undefined,
+      beamwidth: row.beamwidth !== null ? Number(row.beamwidth) : undefined,
     });
   }
 }

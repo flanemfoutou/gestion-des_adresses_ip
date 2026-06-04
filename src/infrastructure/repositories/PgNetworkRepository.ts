@@ -16,10 +16,24 @@ export class PgNetworkRepository implements NetworkRepository {
     return rows.map(row => this.toDomain(row));
   }
 
+  async findAll(): Promise<Network[]> {
+    const rows = await db.select().from(networks);
+    return rows.map(row => this.toDomain(row));
+  }
+
   async save(network: Network): Promise<void> {
     const record = {
       id: network.id,
       cidr: network.cidr,
+      networkAddress: network.networkAddress,
+      broadcastAddress: network.broadcastAddress,
+      subnetMask: network.subnetMask,
+      wildcardMask: network.wildcardMask,
+      usableStart: network.usableStart,
+      usableEnd: network.usableEnd,
+      totalHosts: network.totalHosts,
+      prefix: network.prefix,
+      isPrivate: network.isPrivate,
       gateway: network.gateway,
       vlan: network.vlan,
       accessPointId: network.accessPointId,

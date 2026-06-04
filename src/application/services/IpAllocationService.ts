@@ -33,7 +33,7 @@ export class IpAllocationService {
       status: 'assigned',
     });
 
-    ip.status = 'occupied';
+    ip.assign();
     await this.ipAddressRepo.save(ip);
     await this.assignmentRepo.save(assignment);
     return assignment;
@@ -44,17 +44,20 @@ export class IpAllocationService {
     if (!ip) throw new Error('IP address not found');
     if (ip.status !== 'occupied') throw new Error('Only occupied IP addresses can be released');
 
+    const network = await this.networkRepo.findById(ip.networkId);
+    if (!network) throw new Error('Network not found for IP address');
+
     const assignment = new IpAssignment({
       id: uuidv4(),
       ipAddressId: ip.id,
       clientId: null,
-      accessPointId: ip.networkId,
+      accessPointId: network.accessPointId,
       assignedAt: new Date(),
       releasedAt: new Date(),
       status: 'released',
     });
 
-    ip.status = 'free';
+    ip.release();
     await this.ipAddressRepo.save(ip);
     await this.assignmentRepo.save(assignment);
   }

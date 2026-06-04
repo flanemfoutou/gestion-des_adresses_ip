@@ -4,6 +4,8 @@ import { IpAddress } from "@/domain/ipAddress/IpAddress";
 import { IpAssignment } from "@/domain/ipAssignment/IpAssignment";
 import { Network } from "@/domain/network/Network";
 import { Base } from "@/domain/base/Base";
+import { CpeDevice } from "@/domain/cpeDevice/CpeDevice";
+import { SignalMetric } from "@/domain/signal/SignalMetric";
 
 export interface BaseRepository {
   findById(id: string): Promise<Base | null>;
@@ -30,13 +32,33 @@ export interface IpAddressRepository {
   findById(id: string): Promise<IpAddress | null>;
   findByAddress(address: string): Promise<IpAddress | null>;
   findAvailableByNetwork(networkId: string, limit?: number, offset?: number): Promise<IpAddress[]>;
+  findByStatus(status: string, limit?: number, offset?: number): Promise<IpAddress[]>;
+  findByNetworkId(networkId: string, limit?: number, offset?: number): Promise<IpAddress[]>;
+  countAvailableByNetwork(networkId: string): Promise<number>;
+  countByStatus(status: string): Promise<number>;
+  countByNetworkId(networkId: string): Promise<number>;
   save(ipAddress: IpAddress): Promise<void>;
-  listByStatus(status: string, options: { limit: number; offset: number }): Promise<IpAddress[]>;
+}
+
+export interface CpeDeviceRepository {
+  findById(id: string): Promise<CpeDevice | null>;
+  findByClientId(clientId: string): Promise<CpeDevice[]>;
+  findByAccessPointId(accessPointId: string): Promise<CpeDevice[]>;
+  findAll(): Promise<CpeDevice[]>;
+  save(cpeDevice: CpeDevice): Promise<void>;
+}
+
+export interface SignalMetricRepository {
+  findById(id: string): Promise<SignalMetric | null>;
+  findByCpeId(cpeId: string, limit?: number, offset?: number): Promise<SignalMetric[]>;
+  findLatestByCpeId(cpeId: string): Promise<SignalMetric | null>;
+  save(signalMetric: SignalMetric): Promise<void>;
 }
 
 export interface NetworkRepository {
   findById(id: string): Promise<Network | null>;
   findByAccessPointId(accessPointId: string): Promise<Network[]>;
+  findAll(): Promise<Network[]>;
   save(network: Network): Promise<void>;
 }
 

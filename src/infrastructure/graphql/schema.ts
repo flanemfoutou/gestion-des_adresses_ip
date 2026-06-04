@@ -5,14 +5,121 @@ export const typeDefs = `
   enum IpUsageType { client management infrastructure }
   enum ClientType { residential business enterprise iot }
   enum IpAssignmentStatus { assigned released failed }
+  enum SignalQuality { excellent good fair poor critical }
 
-  type Base { id: ID! name: String! location: String! status: BaseStatus! }
-  type AccessPoint { id: ID! name: String! managementIpId: ID! baseId: ID! sector: String! status: AccessPointStatus! }
-  type Network { id: ID! cidr: String! gateway: String! vlan: Int! accessPointId: ID! }
-  type IpAddress { id: ID! address: String! status: IpAddressStatus! usageType: IpUsageType! reserved: Boolean! active: Boolean! networkId: ID! }
-  type Client { id: ID! fullName: String! phoneNumber: String! clientType: ClientType! accessPointId: ID! ipAddressId: ID! }
-  type IpAssignment { id: ID! ipAddressId: ID! clientId: ID! accessPointId: ID! status: IpAssignmentStatus! assignedAt: String! releasedAt: String }
-  
+  type Coordinates {
+    latitude: Float!
+    longitude: Float!
+    altitude: Float
+  }
+
+  type Base {
+    id: ID!
+    name: String!
+    location: String!
+    status: BaseStatus!
+    coordinates: Coordinates
+  }
+
+  type AccessPoint {
+    id: ID!
+    name: String!
+    managementIpId: ID!
+    baseId: ID!
+    sector: String!
+    status: AccessPointStatus!
+    coordinates: Coordinates
+    azimuth: Float
+    tilt: Float
+    beamwidth: Float
+  }
+
+  type Network {
+    id: ID!
+    cidr: String!
+    gateway: String!
+    vlan: Int!
+    accessPointId: ID!
+    networkAddress: String!
+    broadcastAddress: String!
+    subnetMask: String!
+    wildcardMask: String!
+    usableStart: String!
+    usableEnd: String!
+    totalHosts: Int!
+    prefix: Int!
+    isPrivate: Boolean!
+  }
+
+  type IpAddress {
+    id: ID!
+    address: String!
+    status: IpAddressStatus!
+    usageType: IpUsageType!
+    reserved: Boolean!
+    active: Boolean!
+    networkId: ID!
+  }
+
+  type Client {
+    id: ID!
+    fullName: String!
+    phoneNumber: String!
+    clientType: ClientType!
+    accessPointId: ID!
+    ipAddressId: ID!
+  }
+
+  type IpAssignment {
+    id: ID!
+    ipAddressId: ID!
+    clientId: ID!
+    accessPointId: ID!
+    status: IpAssignmentStatus!
+    assignedAt: String!
+    releasedAt: String
+  }
+
+  type CpeDevice {
+    id: ID!
+    clientId: ID!
+    accessPointId: ID!
+    model: String!
+    macAddress: String!
+    coordinates: Coordinates
+    azimuth: Float
+  }
+
+  type SignalEvaluation {
+    quality: SignalQuality!
+    needsRealignment: Boolean!
+    recommendation: String!
+  }
+
+  type SignalMetric {
+    id: ID!
+    cpeId: ID!
+    accessPointId: ID!
+    rssi: Float!
+    snr: Float
+    txPower: Float
+    rxPower: Float
+    linkQuality: Float
+    quality: SignalQuality!
+    distance: Float
+    evaluation: SignalEvaluation!
+    measuredAt: String!
+  }
+
+  type FieldReport {
+    cpe: CpeDevice!
+    accessPoint: AccessPoint!
+    latestSignal: SignalMetric!
+    evaluation: SignalEvaluation!
+    distanceMeters: Float
+    signalHistory: [SignalMetric!]!
+  }
+
   type NetworkStats {
     networkId: ID!
     totalIps: Int!
@@ -21,14 +128,39 @@ export const typeDefs = `
     reservedIps: Int!
     decommissionedIps: Int!
   }
-  
+
+  type SubnetInfo {
+    cidr: String!
+    networkAddress: String!
+    broadcastAddress: String!
+    subnetMask: String!
+    wildcardMask: String!
+    usableStart: String!
+    usableEnd: String!
+    totalHosts: Int!
+    prefix: Int!
+    isPrivate: Boolean!
+  }
+
+  type GlobalIpStats {
+    totalNetworks: Int!
+    totalIps: Int!
+    totalUsedIps: Int!
+    totalFreeIps: Int!
+    totalReservedIps: Int!
+    utilizationPercentage: Float!
+    averageSubnetSize: Float!
+    privateNetworksCount: Int!
+    publicNetworksCount: Int!
+  }
+
   type PaginatedClientResponse {
     data: [Client!]!
     total: Int!
     limit: Int!
     offset: Int!
   }
-  
+
   type PaginatedIpAddressResponse {
     data: [IpAddress!]!
     total: Int!
@@ -36,81 +168,191 @@ export const typeDefs = `
     offset: Int!
   }
 
-  input CreateBaseInput { name: String! location: String! status: BaseStatus! }
-  input UpdateBaseInput { name: String location: String status: BaseStatus }
-  input CreateAccessPointInput { name: String! managementIpId: ID! baseId: ID! sector: String! status: AccessPointStatus! }
-  input UpdateAccessPointInput { name: String sector: String status: AccessPointStatus }
-  input CreateNetworkInput { cidr: String! gateway: String! vlan: Int! accessPointId: ID! }
-  input UpdateNetworkInput { cidr: String gateway: String vlan: Int }
-  input CreateClientInput { fullName: String! phoneNumber: String! clientType: ClientType! accessPointId: ID! ipAddressId: ID! }
-  input UpdateClientInput { fullName: String phoneNumber: String clientType: ClientType }
-  input CreateIpAddressInput { address: String! usageType: IpUsageType! reserved: Boolean! active: Boolean! networkId: ID! }
-  input AssignIpInput { clientId: ID! accessPointId: ID! networkId: ID! }
-  input ReserveIpInput { ipAddressId: ID! usageType: IpUsageType! }
-  input DecommissionIpInput { ipAddressId: ID! }
-  input BulkAssignIpInput { clientIds: [ID!]! accessPointId: ID! networkId: ID! }
-  input ChangeAccessPointInput { clientId: ID! newAccessPointId: ID! }
+  input CoordinatesInput {
+    latitude: Float!
+    longitude: Float!
+    altitude: Float
+  }
+
+  input CreateBaseInput {
+    name: String!
+    location: String!
+    status: BaseStatus!
+    coordinates: CoordinatesInput
+  }
+
+  input UpdateBaseInput {
+    name: String
+    location: String
+    status: BaseStatus
+    coordinates: CoordinatesInput
+  }
+
+  input CreateAccessPointInput {
+    name: String!
+    managementIpId: ID!
+    baseId: ID!
+    sector: String!
+    status: AccessPointStatus!
+    coordinates: CoordinatesInput
+    azimuth: Float
+    tilt: Float
+    beamwidth: Float
+  }
+
+  input UpdateAccessPointInput {
+    name: String
+    sector: String
+    status: AccessPointStatus
+    coordinates: CoordinatesInput
+    azimuth: Float
+    tilt: Float
+    beamwidth: Float
+  }
+
+  input CreateNetworkInput {
+    cidr: String!
+    gateway: String!
+    vlan: Int!
+    accessPointId: ID!
+  }
+
+  input UpdateNetworkInput {
+    cidr: String
+    gateway: String
+    vlan: Int
+  }
+
+  input CreateClientInput {
+    fullName: String!
+    phoneNumber: String!
+    clientType: ClientType!
+    accessPointId: ID!
+    ipAddressId: ID!
+  }
+
+  input UpdateClientInput {
+    fullName: String
+    phoneNumber: String
+    clientType: ClientType
+  }
+
+  input CreateIpAddressInput {
+    address: String!
+    usageType: IpUsageType!
+    reserved: Boolean!
+    active: Boolean!
+    networkId: ID!
+  }
+
+  input AssignIpInput {
+    clientId: ID!
+    accessPointId: ID!
+    networkId: ID!
+  }
+
+  input ReserveIpInput {
+    ipAddressId: ID!
+    usageType: IpUsageType!
+  }
+
+  input DecommissionIpInput {
+    ipAddressId: ID!
+  }
+
+  input BulkAssignIpInput {
+    clientIds: [ID!]!
+    accessPointId: ID!
+    networkId: ID!
+  }
+
+  input ChangeAccessPointInput {
+    clientId: ID!
+    newAccessPointId: ID!
+  }
+
+  input RecordSignalInput {
+    cpeId: ID!
+    accessPointId: ID!
+    rssi: Float!
+    snr: Float
+    txPower: Float
+    rxPower: Float
+    linkQuality: Float
+  }
+
+  input CreateCpeInput {
+    clientId: ID!
+    accessPointId: ID!
+    model: String!
+    macAddress: String!
+    coordinates: CoordinatesInput
+    azimuth: Float
+  }
 
   type Query {
-    # Health Check
     health: String!
-    
-    # Base Queries
+
     getBase(id: ID!): Base
     listBases: [Base!]!
-    
-    # AccessPoint Queries
+
     getAccessPoint(id: ID!): AccessPoint
     listAccessPoints(baseId: ID!): [AccessPoint!]!
-    
-    # Network Queries
+
     getNetwork(id: ID!): Network
     listNetworks(accessPointId: ID!): [Network!]!
     networkStats(networkId: ID!): NetworkStats
-    
-    # Client Queries
+
+    calculateSubnet(cidr: String!): SubnetInfo!
+    isIpInNetwork(ip: String!, networkId: ID!): Boolean!
+    suggestNextNetwork(baseNetworkId: ID!, prefix: Int!): String!
+    splitNetwork(networkId: ID!, newPrefix: Int!): [SubnetInfo!]!
+    globalIpStats: GlobalIpStats!
+
     getClient(id: ID!): Client
     listClients(accessPointId: ID!, limit: Int = 50, offset: Int = 0): PaginatedClientResponse!
     searchClients(query: String!, limit: Int = 20, offset: Int = 0): [Client!]!
-    
-    # IpAddress Queries
+
     getIpAddress(id: ID!): IpAddress
     listAvailableIps(networkId: ID!, limit: Int = 50, offset: Int = 0): PaginatedIpAddressResponse!
     listIpAddressesByStatus(status: IpAddressStatus!, limit: Int = 50, offset: Int = 0): PaginatedIpAddressResponse!
     listIpAddressesByNetwork(networkId: ID!, limit: Int = 50, offset: Int = 0): PaginatedIpAddressResponse!
-    
-    # Assignment History
+
+    getFieldReport(cpeId: ID!): FieldReport!
+    listCpesNeedingRealignment(accessPointId: ID): [FieldReport!]!
+    getSignalHistory(cpeId: ID!, limit: Int = 20): [SignalMetric!]!
+    getCurrentSignal(cpeId: ID!): SignalMetric
+
     ipAssignmentHistory(ipAddressId: ID!): [IpAssignment!]!
   }
 
   type Mutation {
-    # Base Mutations
     createBase(input: CreateBaseInput!): Base!
     updateBase(id: ID!, input: UpdateBaseInput!): Base!
     deleteBase(id: ID!): Boolean!
-    
-    # AccessPoint Mutations
+
     createAccessPoint(input: CreateAccessPointInput!): AccessPoint!
     updateAccessPoint(id: ID!, input: UpdateAccessPointInput!): AccessPoint!
     updateAccessPointStatus(id: ID!, status: AccessPointStatus!): AccessPoint!
-    
-    # Network Mutations
+
     createNetwork(input: CreateNetworkInput!): Network!
     updateNetwork(id: ID!, input: UpdateNetworkInput!): Network!
     deleteNetwork(id: ID!): Boolean!
-    
-    # Client Mutations
+
     createClient(input: CreateClientInput!): Client!
     updateClient(id: ID!, input: UpdateClientInput!): Client!
     deleteClient(id: ID!): Boolean!
     changeClientAccessPoint(input: ChangeAccessPointInput!): Client!
-    
-    # IpAddress Mutations
+
     createIpAddress(input: CreateIpAddressInput!): IpAddress!
     assignIp(input: AssignIpInput!): IpAssignment!
     releaseIp(ipAddressId: ID!): Boolean!
     reserveIp(input: ReserveIpInput!): IpAddress!
     decommissionIp(input: DecommissionIpInput!): IpAddress!
     bulkAssignIp(input: BulkAssignIpInput!): [IpAssignment!]!
+
+    createCpeDevice(input: CreateCpeInput!): CpeDevice!
+    updateCpeLocation(id: ID!, coordinates: CoordinatesInput!, azimuth: Float): CpeDevice!
+    recordSignalMetric(input: RecordSignalInput!): SignalMetric!
   }
 `;

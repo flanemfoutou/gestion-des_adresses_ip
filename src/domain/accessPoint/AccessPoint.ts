@@ -2,10 +2,16 @@ import { Entity } from '@/domain/common/Entity';
 import { AccessPointStatus } from './AccessPointStatus';
 
 export class AccessPoint extends Entity<string> {
-  readonly name: string;
+  name: string;
   readonly managementIpId: string;
   readonly baseId: string;
-  readonly sector: string;
+  sector: string;
+  latitude?: number;
+  longitude?: number;
+  altitude?: number;
+  azimuth?: number;
+  tilt?: number;
+  beamwidth?: number;
   private _status: AccessPointStatus;
 
   constructor(params: {
@@ -14,6 +20,12 @@ export class AccessPoint extends Entity<string> {
     managementIpId: string;
     baseId: string;
     sector: string;
+    latitude?: number;
+    longitude?: number;
+    altitude?: number;
+    azimuth?: number;
+    tilt?: number;
+    beamwidth?: number;
     status?: AccessPointStatus;
   }) {
     super(params.id);
@@ -21,11 +33,23 @@ export class AccessPoint extends Entity<string> {
     if (!params.managementIpId) throw new Error('AccessPoint must reference a management IP');
     if (!params.baseId) throw new Error('AccessPoint must belong to a base');
     if (!params.sector.trim()) throw new Error('AccessPoint sector is required');
+    if (params.latitude !== undefined && (params.latitude < -90 || params.latitude > 90)) {
+      throw new Error('AccessPoint latitude must be between -90 and 90');
+    }
+    if (params.longitude !== undefined && (params.longitude < -180 || params.longitude > 180)) {
+      throw new Error('AccessPoint longitude must be between -180 and 180');
+    }
 
     this.name = params.name;
     this.managementIpId = params.managementIpId;
     this.baseId = params.baseId;
     this.sector = params.sector;
+    this.latitude = params.latitude;
+    this.longitude = params.longitude;
+    this.altitude = params.altitude;
+    this.azimuth = params.azimuth;
+    this.tilt = params.tilt;
+    this.beamwidth = params.beamwidth;
     this._status = params.status ?? 'online';
   }
 

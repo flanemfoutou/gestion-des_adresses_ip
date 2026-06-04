@@ -21,6 +21,9 @@ export class PgBaseRepository implements BaseRepository {
       id: base.id,
       name: base.name,
       location: base.location,
+      latitude: (base as any).latitude ?? null,
+      longitude: (base as any).longitude ?? null,
+      altitude: (base as any).altitude ?? null,
       status: base.status,
     };
 
@@ -35,6 +38,9 @@ export class PgBaseRepository implements BaseRepository {
       id: row.id,
       name: row.name,
       location: row.location,
+      latitude: row.latitude !== null ? Number(row.latitude) : undefined,
+      longitude: row.longitude !== null ? Number(row.longitude) : undefined,
+      altitude: row.altitude !== null ? Number(row.altitude) : undefined,
       status: row.status,
     });
   }

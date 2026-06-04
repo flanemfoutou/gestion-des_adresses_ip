@@ -1,4 +1,4 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import { db } from '@/infrastructure/db/neon';
 import { ipAddresses } from '@/infrastructure/db/schema';
 import { IpAddress } from '@/domain/ipAddress/IpAddress';
@@ -36,18 +36,65 @@ export class PgIpAddressRepository implements IpAddressRepository {
     return rows.map(row => this.toDomain(row));
   }
 
-  async listByStatus(
+  async findByStatus(
     status: IpAddressStatus,
-    options: { limit: number; offset: number },
+    limit = 50,
+    offset = 0,
   ): Promise<IpAddress[]> {
     const rows = await db
       .select()
       .from(ipAddresses)
       .where(eq(ipAddresses.status, status))
-      .limit(options.limit)
-      .offset(options.offset)
+      .limit(limit)
+      .offset(offset)
       .orderBy(asc(ipAddresses.address));
     return rows.map(row => this.toDomain(row));
+  }
+
+  async findByNetworkId(
+    networkId: string,
+    limit = 50,
+    offset = 0,
+  ): Promise<IpAddress[]> {
+    const rows = await db
+      .select()
+      .from(ipAddresses)
+      .where(eq(ipAddresses.networkId, networkId))
+      .limit(limit)
+      .offset(offset)
+      .orderBy(asc(ipAddresses.address));
+    return rows.map(row => this.toDomain(row));
+  }
+
+  async countAvailableByNetwork(networkId: string): Promise<number> {
+    const rows = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(ipAddresses)
+      .where(
+        and(
+          eq(ipAddresses.networkId, networkId),
+          eq(ipAddresses.status, 'free'),
+          eq(ipAddresses.reserved, false),
+          eq(ipAddresses.active, true),
+        ),
+      );
+    return Number(rows[0]?.count ?? 0);
+  }
+
+  async countByStatus(status: IpAddressStatus): Promise<number> {
+    const rows = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(ipAddresses)
+      .where(eq(ipAddresses.status, status));
+    return Number(rows[0]?.count ?? 0);
+  }
+
+  async countByNetworkId(networkId: string): Promise<number> {
+    const rows = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(ipAddresses)
+      .where(eq(ipAddresses.networkId, networkId));
+    return Number(rows[0]?.count ?? 0);
   }
 
   async save(ipAddress: IpAddress): Promise<void> {

@@ -1,4 +1,5 @@
 import { Entity } from '@/domain/common/Entity';
+import { IpCalculatorService } from './IpCalculatorService';
 
 const CIDR_REGEX = /^(\d{1,3}\.){3}\d{1,3}\/\d{1,2}$/;
 const IP_REGEX = /^(\d{1,3}\.){3}\d{1,3}$/;
@@ -8,6 +9,17 @@ export class Network extends Entity<string> {
   readonly gateway: string;
   readonly vlan: number;
   readonly accessPointId: string;
+
+  // Computed from CIDR
+  readonly networkAddress: string;
+  readonly broadcastAddress: string;
+  readonly subnetMask: string;
+  readonly wildcardMask: string;
+  readonly usableStart: string;
+  readonly usableEnd: string;
+  readonly totalHosts: number;
+  readonly prefix: number;
+  readonly isPrivate: boolean;
 
   constructor(params: {
     id: string;
@@ -27,5 +39,17 @@ export class Network extends Entity<string> {
     this.gateway = params.gateway;
     this.vlan = params.vlan;
     this.accessPointId = params.accessPointId;
+
+    // Calculate CIDR information
+    const cidrInfo = IpCalculatorService.fromCidr(params.cidr);
+    this.networkAddress = cidrInfo.networkAddress;
+    this.broadcastAddress = cidrInfo.broadcastAddress;
+    this.subnetMask = cidrInfo.subnetMask;
+    this.wildcardMask = cidrInfo.wildcardMask;
+    this.usableStart = cidrInfo.usableStart;
+    this.usableEnd = cidrInfo.usableEnd;
+    this.totalHosts = cidrInfo.totalHosts;
+    this.prefix = cidrInfo.prefix;
+    this.isPrivate = cidrInfo.isPrivate;
   }
 }

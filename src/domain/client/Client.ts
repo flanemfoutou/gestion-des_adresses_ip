@@ -2,11 +2,11 @@ import { Entity } from '@/domain/common/Entity';
 import { ClientType } from './ClientType';
 
 export class Client extends Entity<string> {
-  readonly fullName: string;
-  readonly phoneNumber: string;
-  readonly clientType: ClientType;
-  readonly accessPointId: string;
-  readonly ipAddressId: string;
+  fullName: string;
+  phoneNumber: string;
+  clientType: ClientType;
+  accessPointId: string;
+  ipAddressId: string;
 
   constructor(params: {
     id: string;

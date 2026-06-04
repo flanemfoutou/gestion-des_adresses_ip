@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { db } from '@/infrastructure/db/neon';
 import { ipAssignments } from '@/infrastructure/db/schema';
 import { IpAssignment } from '@/domain/ipAssignment/IpAssignment';
@@ -44,7 +44,8 @@ export class PgIpAssignmentRepository implements IpAssignmentRepository {
     const record = {
       id: assignment.id,
       ipAddressId: assignment.ipAddressId,
-      clientId: assignment.clientId,
+      clientId: assignment.clientId ?? null,
+      accessPointId: assignment.accessPointId,
       status: assignment.status,
       assignedAt: assignment.assignedAt,
       releasedAt: assignment.releasedAt,
