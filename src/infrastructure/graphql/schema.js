@@ -68,6 +68,31 @@ export const typeDefs = `
     clientType: ClientType!
     accessPointId: ID!
     ipAddressId: ID!
+    coordinates: Coordinates
+  }
+  
+  type ClientWithDistance {
+    clientId: ID!
+    clientName: String!
+    distance: Float!
+    latitude: Float
+    longitude: Float
+  }
+
+  type NearestAccessPoint {
+    accessPointId: ID!
+    accessPointName: String!
+    baseName: String!
+    distance: Float!
+    latitude: Float
+    longitude: Float
+  }
+
+  type ClientGeolocationStatus {
+    clientId: ID!
+    clientName: String!
+    phoneNumber: String!
+    hasCoordinates: Boolean!
   }
 
   type IpAssignment {
@@ -229,12 +254,14 @@ export const typeDefs = `
     clientType: ClientType!
     accessPointId: ID!
     ipAddressId: ID!
+    coordinates: CoordinatesInput
   }
 
   input UpdateClientInput {
     fullName: String
     phoneNumber: String
     clientType: ClientType
+    coordinates: CoordinatesInput
   }
 
   input CreateIpAddressInput {
@@ -324,12 +351,15 @@ export const typeDefs = `
     getCurrentSignal(cpeId: ID!): SignalMetric
 
     ipAssignmentHistory(ipAddressId: ID!): [IpAssignment!]!
+    findClientsNearAccessPoint(accessPointId: ID!, maxDistance: Int = 100): [ClientWithDistance!]!
+    findNearestAccessPoint(clientId: ID!): NearestAccessPoint!
+    listClientsNeedingGeolocation: [ClientGeolocationStatus!]!
   }
 
   type Mutation {
     createBase(input: CreateBaseInput!): Base!
     updateBase(id: ID!, input: UpdateBaseInput!): Base!
-    deleteBase(id: ID!): Boolean!
+    deleteBase(id: ID!): Base!
 
     createAccessPoint(input: CreateAccessPointInput!): AccessPoint!
     updateAccessPoint(id: ID!, input: UpdateAccessPointInput!): AccessPoint!
@@ -337,11 +367,12 @@ export const typeDefs = `
 
     createNetwork(input: CreateNetworkInput!): Network!
     updateNetwork(id: ID!, input: UpdateNetworkInput!): Network!
-    deleteNetwork(id: ID!): Boolean!
+    deleteNetwork(id: ID!): Network!
 
     createClient(input: CreateClientInput!): Client!
     updateClient(id: ID!, input: UpdateClientInput!): Client!
-    deleteClient(id: ID!): Boolean!
+    updateClientLocation(clientId: ID!, coordinates: CoordinatesInput!): Client!
+    deleteClient(id: ID!): Client!
     changeClientAccessPoint(input: ChangeAccessPointInput!): Client!
 
     createIpAddress(input: CreateIpAddressInput!): IpAddress!

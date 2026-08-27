@@ -18,6 +18,20 @@ const yoga = createYoga({
 const server = createServer(yoga);
 const PORT = process.env.PORT ?? 4000;
 
+server.on('error', (err: any) => {
+  if (err && err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is déjà utilisé. Libère le port ou change la variable d'environnement PORT.`);
+  } else {
+    console.error('Erreur serveur:', err);
+  }
+  process.exit(1);
+});
+
+process.on('uncaughtException', (err: any) => {
+  console.error('Exception non capturée:', err);
+  process.exit(1);
+});
+
 server.listen(PORT, () => {
   console.log(`GraphQL server running on http://localhost:${PORT}/graphql`);
 });

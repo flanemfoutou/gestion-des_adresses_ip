@@ -1,6 +1,12 @@
 import { Entity } from '@/domain/common/Entity';
 import { BaseStatus } from './BaseStatus';
 
+export interface Coordinates {
+  latitude: number;
+  longitude: number;
+  altitude?: number;
+}
+
 export class Base extends Entity<string> {
   name: string;
   location: string;
@@ -34,6 +40,17 @@ export class Base extends Entity<string> {
     this.longitude = params.longitude;
     this.altitude = params.altitude;
     this._status = params.status ?? 'active';
+  }
+
+  get coordinates(): Coordinates | undefined {
+    if (this.latitude !== undefined && this.longitude !== undefined) {
+      return {
+        latitude: this.latitude,
+        longitude: this.longitude,
+        altitude: this.altitude,
+      };
+    }
+    return undefined;
   }
 
   get status(): BaseStatus {

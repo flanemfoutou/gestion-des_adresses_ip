@@ -1,0 +1,1 @@
+ALTER TABLE "clients" ADD COLUMN "ip_address_id" uuid NOT NULL;

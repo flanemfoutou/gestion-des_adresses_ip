@@ -1,16 +1,16 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { db } from '@/infrastructure/db/neon';
 import { bases } from '@/infrastructure/db/schema';
 import { Base } from '@/domain/base/Base';
 export class PgBaseRepository {
     async findById(id) {
-        const rows = await db.select().from(bases).where(eq(bases.id, id)).limit(1);
+        const rows = await db.select().from(bases).where(and(eq(bases.id, id), isNull(bases.deletedAt))).limit(1);
         if (!rows[0])
             return null;
         return this.toDomain(rows[0]);
     }
     async findAll() {
-        const rows = await db.select().from(bases).orderBy(bases.name);
+        const rows = await db.select().from(bases).where(isNull(bases.deletedAt)).orderBy(bases.name);
         return rows.map(row => this.toDomain(row));
     }
     async save(base) {
@@ -27,6 +27,13 @@ export class PgBaseRepository {
             .insert(bases)
             .values(record)
             .onConflictDoUpdate({ target: bases.id, set: record });
+    }
+    async delete(id) {
+        const existing = await this.findById(id);
+        if (!existing)
+            return null;
+        await db.update(bases).set({ deletedAt: new Date() }).where(eq(bases.id, id));
+        return existing;
     }
     toDomain(row) {
         return new Base({

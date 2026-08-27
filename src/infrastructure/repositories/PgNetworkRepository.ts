@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { db } from '@/infrastructure/db/neon';
 import { networks } from '@/infrastructure/db/schema';
 import { Network } from '@/domain/network/Network';
@@ -6,18 +6,24 @@ import { NetworkRepository } from '@/application/ports/repositories';
 
 export class PgNetworkRepository implements NetworkRepository {
   async findById(id: string): Promise<Network | null> {
-    const rows = await db.select().from(networks).where(eq(networks.id, id)).limit(1);
+    const rows = await db.select().from(networks).where(and(eq(networks.id, id), isNull(networks.deletedAt))).limit(1);
+    if (!rows[0]) return null;
+    return this.toDomain(rows[0]);
+  }
+
+  async findByCidr(cidr: string): Promise<Network | null> {
+    const rows = await db.select().from(networks).where(and(eq(networks.cidr, cidr), isNull(networks.deletedAt))).limit(1);
     if (!rows[0]) return null;
     return this.toDomain(rows[0]);
   }
 
   async findByAccessPointId(accessPointId: string): Promise<Network[]> {
-    const rows = await db.select().from(networks).where(eq(networks.accessPointId, accessPointId));
+    const rows = await db.select().from(networks).where(and(eq(networks.accessPointId, accessPointId), isNull(networks.deletedAt)));
     return rows.map(row => this.toDomain(row));
   }
 
   async findAll(): Promise<Network[]> {
-    const rows = await db.select().from(networks);
+    const rows = await db.select().from(networks).where(isNull(networks.deletedAt));
     return rows.map(row => this.toDomain(row));
   }
 
@@ -43,6 +49,13 @@ export class PgNetworkRepository implements NetworkRepository {
       .insert(networks)
       .values(record)
       .onConflictDoUpdate({ target: networks.id, set: record });
+  }
+
+  async delete(id: string): Promise<Network | null> {
+    const existing = await this.findById(id);
+    if (!existing) return null;
+    await db.update(networks).set({ deletedAt: new Date() }).where(eq(networks.id, id));
+    return existing;
   }
 
   private toDomain(row: typeof networks.$inferSelect): Network {

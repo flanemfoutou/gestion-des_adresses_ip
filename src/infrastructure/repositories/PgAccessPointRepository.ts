@@ -26,6 +26,11 @@ export class PgAccessPointRepository implements AccessPointRepository {
     return rows.map(row => this.toDomain(row));
   }
 
+  async findAll(): Promise<AccessPoint[]> {
+    const rows = await db.select().from(accessPoints);
+    return rows.map(row => this.toDomain(row));
+  }
+
   async save(accessPoint: AccessPoint): Promise<void> {
     const record = {
       id: accessPoint.id,

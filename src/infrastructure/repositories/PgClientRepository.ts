@@ -1,4 +1,4 @@
-import { eq, ilike, or } from 'drizzle-orm';
+import { and, eq, ilike, isNull, or } from 'drizzle-orm';
 import { db } from '@/infrastructure/db/neon';
 import { clients } from '@/infrastructure/db/schema';
 import { Client } from '@/domain/client/Client';
@@ -6,18 +6,29 @@ import { ClientRepository } from '@/application/ports/repositories';
 
 export class PgClientRepository implements ClientRepository {
   async findById(id: string): Promise<Client | null> {
-    const rows = await db.select().from(clients).where(eq(clients.id, id)).limit(1);
+    const rows = await db.select().from(clients).where(and(eq(clients.id, id), isNull(clients.deletedAt))).limit(1);
     if (!rows[0]) return null;
     return this.toDomain(rows[0]);
   }
 
+  async findAll(): Promise<Client[]> {
+    const rows = await db.select().from(clients).where(isNull(clients.deletedAt));
+    return rows.map(row => this.toDomain(row));
+  }
+
   async findByAccessPointId(accessPointId: string): Promise<Client[]> {
-    const rows = await db.select().from(clients).where(eq(clients.accessPointId, accessPointId));
+    const rows = await db.select().from(clients).where(and(eq(clients.accessPointId, accessPointId), isNull(clients.deletedAt)));
     return rows.map(row => this.toDomain(row));
   }
 
   async findByIpAddressId(ipAddressId: string): Promise<Client | null> {
-    const rows = await db.select().from(clients).where(eq(clients.ipAddressId, ipAddressId)).limit(1);
+    const rows = await db.select().from(clients).where(and(eq(clients.ipAddressId, ipAddressId), isNull(clients.deletedAt))).limit(1);
+    if (!rows[0]) return null;
+    return this.toDomain(rows[0]);
+  }
+
+  async findByPhoneNumber(phone: string): Promise<Client | null> {
+    const rows = await db.select().from(clients).where(and(eq(clients.phoneNumber, phone), isNull(clients.deletedAt))).limit(1);
     if (!rows[0]) return null;
     return this.toDomain(rows[0]);
   }
@@ -28,8 +39,10 @@ export class PgClientRepository implements ClientRepository {
       .from(clients)
       .where(
         or(
-          ilike(clients.fullName, `%${query}%`),
-          ilike(clients.phoneNumber, `%${query}%`),
+          and(isNull(clients.deletedAt), or(
+            ilike(clients.fullName, `%${query}%`),
+            ilike(clients.phoneNumber, `%${query}%`),
+          )),
         ),
       )
       .limit(limit)
@@ -45,12 +58,22 @@ export class PgClientRepository implements ClientRepository {
       clientType: client.clientType,
       accessPointId: client.accessPointId,
       ipAddressId: client.ipAddressId,
+      latitude: (client as any).coordinates?.latitude ?? null,
+      longitude: (client as any).coordinates?.longitude ?? null,
+      altitude: (client as any).coordinates?.altitude ?? null,
     };
 
     await db
       .insert(clients)
       .values(record)
       .onConflictDoUpdate({ target: clients.id, set: record });
+  }
+
+  async delete(id: string): Promise<Client | null> {
+    const existing = await this.findById(id);
+    if (!existing) return null;
+    await db.update(clients).set({ deletedAt: new Date() }).where(eq(clients.id, id));
+    return existing;
   }
 
   private toDomain(row: typeof clients.$inferSelect): Client {
@@ -61,6 +84,14 @@ export class PgClientRepository implements ClientRepository {
       clientType: row.clientType,
       accessPointId: row.accessPointId,
       ipAddressId: row.ipAddressId,
+      coordinates:
+        row.latitude !== null && row.longitude !== null
+          ? {
+              latitude: Number(row.latitude),
+              longitude: Number(row.longitude),
+              altitude: row.altitude !== null ? Number(row.altitude) : undefined,
+            }
+          : undefined,
     });
   }
 }

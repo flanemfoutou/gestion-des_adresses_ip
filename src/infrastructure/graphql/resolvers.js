@@ -8,6 +8,16 @@ import { IpCalculatorService } from '@/domain/network/IpCalculatorService';
 import { eq } from 'drizzle-orm';
 import { db } from '@/infrastructure/db/neon';
 import { networks as networkTable, ipAddresses } from '@/infrastructure/db/schema';
+function normalizeId(id) {
+    if (!id)
+        return id;
+    const s = id.toString();
+    if (s.length === 36)
+        return s;
+    if (s.length > 36)
+        return s.slice(-36);
+    return s;
+}
 export const resolvers = {
     Query: {
         health: () => 'ok',
@@ -216,7 +226,7 @@ export const resolvers = {
             return base;
         },
         updateBase: async (_, { id, input }, ctx) => {
-            const base = await ctx.repositories.baseRepo.findById(id);
+            const base = await ctx.repositories.baseRepo.findById(normalizeId(id));
             if (!base)
                 throw new Error(`Base with id ${id} not found`);
             if (input.name)
@@ -240,7 +250,10 @@ export const resolvers = {
             return base;
         },
         deleteBase: async (_, { id }, ctx) => {
-            return ctx.repositories.baseRepo.delete(id);
+            const deletedBase = await ctx.repositories.baseRepo.delete(normalizeId(id));
+            if (!deletedBase)
+                throw new Error(`Base with id ${id} not found`);
+            return deletedBase;
         },
         createAccessPoint: async (_, { input }, ctx) => {
             const accessPoint = new AccessPoint({
@@ -277,7 +290,7 @@ export const resolvers = {
                     accessPoint.setMaintenance();
             }
             if (input.coordinates) {
-                accessPoint.latitude = input.coordinates.latitude;
+                id: (base) => `bas${base.id}`,
                 accessPoint.longitude = input.coordinates.longitude;
                 accessPoint.altitude = input.coordinates.altitude;
             }
@@ -328,7 +341,10 @@ export const resolvers = {
             return network;
         },
         deleteNetwork: async (_, { id }, ctx) => {
-            return ctx.repositories.networkRepo.delete(id);
+            const deletedNetwork = await ctx.repositories.networkRepo.delete(normalizeId(id));
+            if (!deletedNetwork)
+                throw new Error(`Network with id ${id} not found`);
+            return deletedNetwork;
         },
         createClient: async (_, { input }, ctx) => {
             const client = new Client({
@@ -356,7 +372,10 @@ export const resolvers = {
             return client;
         },
         deleteClient: async (_, { id }, ctx) => {
-            return ctx.repositories.clientRepo.delete(id);
+            const deletedClient = await ctx.repositories.clientRepo.delete(normalizeId(id));
+            if (!deletedClient)
+                throw new Error(`Client with id ${id} not found`);
+            return deletedClient;
         },
         changeClientAccessPoint: async (_, { input }, ctx) => {
             const client = await ctx.repositories.clientRepo.findById(input.clientId);

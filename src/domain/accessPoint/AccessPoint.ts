@@ -1,6 +1,12 @@
 import { Entity } from '@/domain/common/Entity';
 import { AccessPointStatus } from './AccessPointStatus';
 
+export interface Coordinates {
+  latitude: number;
+  longitude: number;
+  altitude?: number;
+}
+
 export class AccessPoint extends Entity<string> {
   name: string;
   readonly managementIpId: string;
@@ -51,6 +57,17 @@ export class AccessPoint extends Entity<string> {
     this.tilt = params.tilt;
     this.beamwidth = params.beamwidth;
     this._status = params.status ?? 'online';
+  }
+
+  get coordinates(): Coordinates | undefined {
+    if (this.latitude !== undefined && this.longitude !== undefined) {
+      return {
+        latitude: this.latitude,
+        longitude: this.longitude,
+        altitude: this.altitude,
+      };
+    }
+    return undefined;
   }
 
   get status(): AccessPointStatus {

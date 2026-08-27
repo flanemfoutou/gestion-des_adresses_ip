@@ -226,11 +226,14 @@ export class IpCalculatorService {
 
   private static ipToInt(ip: string): number {
     const bytes = this.ipToBytes(ip);
-    return (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
+    // Use arithmetic to avoid signed 32-bit shift overflow and ensure unsigned result
+    const value = (bytes[0] * 256 * 256 * 256) + (bytes[1] * 256 * 256) + (bytes[2] * 256) + bytes[3];
+    return value >>> 0;
   }
 
   private static intToIp(num: number): string {
-    return [(num >>> 24) & 255, (num >>> 16) & 255, (num >>> 8) & 255, num & 255]
+    const n = num >>> 0;
+    return [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255]
       .map((b) => (b < 0 ? 256 + b : b).toString())
       .join('.');
   }

@@ -114,6 +114,29 @@ export class PgIpAddressRepository implements IpAddressRepository {
       .onConflictDoUpdate({ target: ipAddresses.id, set: record });
   }
 
+  async getNetworkStats(networkId: string): Promise<{ total: number; free: number; occupied: number; reserved: number }> {
+    const rows = await db
+      .select({ status: ipAddresses.status, count: sql<number>`count(*)` })
+      .from(ipAddresses)
+      .where(eq(ipAddresses.networkId, networkId))
+      .groupBy(ipAddresses.status);
+
+    let total = 0;
+    let free = 0;
+    let occupied = 0;
+    let reserved = 0;
+
+    for (const row of rows) {
+      const c = Number((row as any).count ?? 0);
+      total += c;
+      if (row.status === 'free') free = c;
+      else if (row.status === 'occupied') occupied = c;
+      else if (row.status === 'reserved') reserved = c;
+    }
+
+    return { total, free, occupied, reserved };
+  }
+
   private toDomain(row: typeof ipAddresses.$inferSelect): IpAddress {
     return new IpAddress({
       id: row.id,
