@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Dashboard } from '@/components/dashboard';
 import { ManagementWorkspace } from '@/components/management-workspace';
 
-export type WorkspacePage = 'overview' | 'bases' | 'networks' | 'clients' | 'ips';
+export type WorkspacePage = 'overview' | 'bases' | 'networks' | 'clients' | 'ips' | 'map';
 
 export default function HomePage() {
   const [page, setPage] = useState<WorkspacePage>('overview');

@@ -2,3 +2,5 @@ node_modules/
 dist/
 .env
 *.lock
+*.tsbuildinfo
+tsconfig.tsbuildinfo

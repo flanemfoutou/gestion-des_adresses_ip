@@ -11,18 +11,39 @@ export class IpAllocationService {
     private readonly networkRepo: NetworkRepository,
   ) {}
 
-  async allocateToClient({ clientId, accessPointId, networkId }: { clientId: string; accessPointId: string; networkId: string }): Promise<IpAssignment> {
+  async allocateToClient({
+    clientId,
+    accessPointId,
+    networkId,
+    ipAddressId,
+  }: {
+    clientId: string;
+    accessPointId: string;
+    networkId: string;
+    ipAddressId?: string;
+  }): Promise<IpAssignment> {
     const network = await this.networkRepo.findById(networkId);
     if (!network) throw new Error('Network not found');
 
-    const existingIps = await this.ipAddressRepo.findAvailableByNetwork(networkId, 1);
-    if (existingIps.length === 0) {
-      const allHosts = CidrService.iterateHosts(network.cidr);
-      throw new Error(`No available IP left in network ${network.cidr}. Candidate range start: ${allHosts[0]}`);
+    let ip: IpAddress | null;
+    if (ipAddressId) {
+      ip = await this.ipAddressRepo.findById(ipAddressId);
+      if (!ip) throw new Error('IP address not found');
+      if (ip.networkId !== networkId) {
+        throw new Error('Selected IP address does not belong to the requested network');
+      }
+    } else {
+      const existingIps = await this.ipAddressRepo.findAvailableByNetwork(networkId, 1);
+      ip = existingIps[0] ?? null;
+      if (!ip) {
+        const allHosts = CidrService.iterateHosts(network.cidr);
+        throw new Error(`No available IP left in network ${network.cidr}. Candidate range start: ${allHosts[0]}`);
+      }
     }
 
-    const ip = existingIps[0];
-    if (ip.status !== 'free') throw new Error('Selected IP is not free');
+    if (ip.status !== 'free' || ip.reserved || !ip.active) {
+      throw new Error('Selected IP is not available');
+    }
 
     const assignment = new IpAssignment({
       id: uuidv4(),

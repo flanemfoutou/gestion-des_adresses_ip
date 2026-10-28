@@ -21,6 +21,7 @@ import { ListCpesNeedingRealignmentUseCase } from '@/application/usecases/ListCp
 import {
   FindClientsNearAccessPointUseCase,
   FindNearestAccessPointUseCase,
+  ListMapLocationsUseCase,
   ListClientsNeedingGeolocationUseCase,
 } from '@/application/usecases/GeolocalizationUseCases';
 
@@ -42,6 +43,7 @@ export type AppContext = {
   geolocation: {
     findClientsNearAccessPoint: FindClientsNearAccessPointUseCase;
     findNearestAccessPoint: FindNearestAccessPointUseCase;
+    listMapLocations: ListMapLocationsUseCase;
     listClientsNeedingGeolocation: ListClientsNeedingGeolocationUseCase;
   };
   repositories: {
@@ -93,6 +95,12 @@ export function createContext({ request }: { request: Request }): AppContext {
     geolocation: {
       findClientsNearAccessPoint: new FindClientsNearAccessPointUseCase(clientRepo, accessPointRepo),
       findNearestAccessPoint: new FindNearestAccessPointUseCase(clientRepo, accessPointRepo, baseRepo),
+      listMapLocations: new ListMapLocationsUseCase(
+        baseRepo,
+        accessPointRepo,
+        clientRepo,
+        cpeDeviceRepo,
+      ),
       listClientsNeedingGeolocation: new ListClientsNeedingGeolocationUseCase(clientRepo),
     },
     repositories: {

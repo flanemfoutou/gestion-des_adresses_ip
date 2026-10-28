@@ -31,10 +31,10 @@ export class Client extends Entity<string> {
     if (!params.ipAddressId) throw new Error('Client must have an IP address');
 
     if (params.coordinates) {
-      if (params.coordinates.latitude < -90 || params.coordinates.latitude > 90) {
+      if (!Number.isFinite(params.coordinates.latitude) || params.coordinates.latitude < -90 || params.coordinates.latitude > 90) {
         throw new Error('Client latitude must be between -90 and 90');
       }
-      if (params.coordinates.longitude < -180 || params.coordinates.longitude > 180) {
+      if (!Number.isFinite(params.coordinates.longitude) || params.coordinates.longitude < -180 || params.coordinates.longitude > 180) {
         throw new Error('Client longitude must be between -180 and 180');
       }
     }

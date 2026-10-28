@@ -39,9 +39,9 @@ export class PgBaseRepository implements BaseRepository {
       id: base.id,
       name: base.name,
       location: base.location,
-      latitude: (base as any).latitude ?? null,
-      longitude: (base as any).longitude ?? null,
-      altitude: (base as any).altitude ?? null,
+      latitude: base.latitude?.toString() ?? null,
+      longitude: base.longitude?.toString() ?? null,
+      altitude: base.altitude?.toString() ?? null,
       status: base.status,
     };
 

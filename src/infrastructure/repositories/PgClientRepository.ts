@@ -58,9 +58,9 @@ export class PgClientRepository implements ClientRepository {
       clientType: client.clientType,
       accessPointId: client.accessPointId,
       ipAddressId: client.ipAddressId,
-      latitude: (client as any).coordinates?.latitude ?? null,
-      longitude: (client as any).coordinates?.longitude ?? null,
-      altitude: (client as any).coordinates?.altitude ?? null,
+      latitude: client.coordinates?.latitude.toString() ?? null,
+      longitude: client.coordinates?.longitude.toString() ?? null,
+      altitude: client.coordinates?.altitude?.toString() ?? null,
     };
 
     await db

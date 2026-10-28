@@ -38,12 +38,12 @@ export class PgAccessPointRepository implements AccessPointRepository {
       managementIpId: accessPoint.managementIpId,
       baseId: accessPoint.baseId,
       sector: accessPoint.sector,
-      latitude: (accessPoint as any).latitude ?? null,
-      longitude: (accessPoint as any).longitude ?? null,
-      altitude: (accessPoint as any).altitude ?? null,
-      azimuth: (accessPoint as any).azimuth ?? null,
-      tilt: (accessPoint as any).tilt ?? null,
-      beamwidth: (accessPoint as any).beamwidth ?? null,
+      latitude: accessPoint.latitude?.toString() ?? null,
+      longitude: accessPoint.longitude?.toString() ?? null,
+      altitude: accessPoint.altitude?.toString() ?? null,
+      azimuth: accessPoint.azimuth?.toString() ?? null,
+      tilt: accessPoint.tilt?.toString() ?? null,
+      beamwidth: accessPoint.beamwidth?.toString() ?? null,
       status: accessPoint.status,
     };
 

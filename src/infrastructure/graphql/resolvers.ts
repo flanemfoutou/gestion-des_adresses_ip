@@ -1,14 +1,15 @@
 import { v4 as uuidv4 } from 'uuid';
+import type { NetworkIpStats } from '@/application/ports/repositories';
 import { GraphQLError } from 'graphql';
+import { CoordinatesSchema } from '@/application/dtos/CoordinatesDTO';
 import { Base } from '@/domain/base/Base';
 import { AccessPoint } from '@/domain/accessPoint/AccessPoint';
 import { Network } from '@/domain/network/Network';
 import { Client } from '@/domain/client/Client';
 import { IpAddress } from '@/domain/ipAddress/IpAddress';
 import { IpCalculatorService } from '@/domain/network/IpCalculatorService';
-import { eq } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { db } from '@/infrastructure/db/neon';
-import { networks as networkTable, ipAddresses } from '@/infrastructure/db/schema';
 
 // Normalize incoming IDs: if prefixed like 'bas<uuid>' return the raw uuid
 function normalizeId(id: any): string | undefined {
@@ -19,9 +20,28 @@ function normalizeId(id: any): string | undefined {
   return s;
 }
 
+function validateCoordinates(input: unknown) {
+  const result = CoordinatesSchema.safeParse(input);
+  if (!result.success) {
+    throw new GraphQLError(
+      `Coordonnées invalides : ${result.error.issues.map((issue) => issue.message).join(', ')}`,
+      { extensions: { code: 'BAD_USER_INPUT' } },
+    );
+  }
+  return result.data;
+}
+
 export const resolvers = {
   Query: {
-    health: () => 'ok',
+    health: async () => {
+      try {
+        await db.execute(sql`select 1`);
+        return 'ok';
+      } catch (error) {
+        console.warn('Database health check failed:', error);
+        return 'degraded';
+      }
+    },
 
     getBase: async (_: any, { id }: any, ctx: any) => {
       return ctx.repositories.baseRepo.findById(normalizeId(id));
@@ -82,12 +102,12 @@ export const resolvers = {
       if (!baseNetwork) throw new Error(`Network with id ${baseNetworkId} not found`);
 
       // Get all existing subnets within this network
-      const allNetworks = await ctx.repositories.networkRepo.findByAccessPointId(
+      const allNetworks: Network[] = await ctx.repositories.networkRepo.findByAccessPointId(
         normalizeId(baseNetwork.accessPointId),
       );
       const existingCidrs = allNetworks
-        .filter((n) => IpCalculatorService.isIpInNetwork(n.networkAddress, baseNetwork.cidr))
-        .map((n) => n.cidr);
+        .filter((network) => IpCalculatorService.isIpInNetwork(network.networkAddress, baseNetwork.cidr))
+        .map((network) => network.cidr);
 
       if (prefix <= baseNetwork.prefix) {
         throw new Error(`New prefix must be larger than base prefix ${baseNetwork.prefix}`);
@@ -136,8 +156,10 @@ export const resolvers = {
     },
 
     globalIpStats: async (_: any, __: any, ctx: any) => {
-      const allNetworks = await ctx.repositories.networkRepo.findAll?.() ||
-        (await db.select().from(networkTable));
+      const allNetworks: Network[] = await ctx.repositories.networkRepo.findAll();
+
+      const ipStatsByNetwork: NetworkIpStats[] = await ctx.repositories.ipAddressRepo.getStatsByNetwork();
+      const statsByNetworkId = new Map(ipStatsByNetwork.map((stats) => [stats.networkId, stats]));
 
       let totalNetworks = 0;
       let totalIps = 0;
@@ -148,21 +170,14 @@ export const resolvers = {
       let publicCount = 0;
 
       for (const network of allNetworks) {
-        const netInfo = network instanceof Network ? network : IpCalculatorService.fromCidr(network.cidr);
-        const usedIpRecords = await db
-          .select()
-          .from(ipAddresses)
-          .where(eq(ipAddresses.networkId, network.id));
-
-        const used = usedIpRecords.filter((ip) => ip.status === 'occupied').length;
-        const reserved = usedIpRecords.filter((ip) => ip.status === 'reserved').length;
-        const free = usedIpRecords.filter((ip) => ip.status === 'free').length;
+        const netInfo = network;
+        const ipStats = statsByNetworkId.get(network.id);
 
         totalNetworks += 1;
         totalIps += netInfo.totalHosts;
-        totalUsedIps += used;
-        totalFreeIps += free;
-        totalReservedIps += reserved;
+        totalUsedIps += ipStats?.occupied ?? 0;
+        totalFreeIps += ipStats?.free ?? 0;
+        totalReservedIps += ipStats?.reserved ?? 0;
 
         if (netInfo.isPrivate) privateCount += 1;
         else publicCount += 1;
@@ -244,7 +259,29 @@ export const resolvers = {
       return ctx.geolocation.findClientsNearAccessPoint.execute(accessPointId, maxDistance);
     },
     findNearestAccessPoint: async (_: any, { clientId }: any, ctx: any) => {
-      return ctx.geolocation.findNearestAccessPoint.execute(clientId);
+      try {
+        return await ctx.geolocation.findNearestAccessPoint.execute(clientId);
+      } catch (error) {
+        console.warn('Nearest AP lookup by client failed:', error);
+        return null;
+      }
+    },
+    findNearestAccessPointAtPosition: async (_: any, { coordinates }: any, ctx: any) => {
+      try {
+        const position = validateCoordinates(coordinates);
+        return await ctx.geolocation.findNearestAccessPoint.executeAtPosition(position);
+      } catch (error) {
+        console.warn('Nearest AP lookup by position failed:', error);
+        return null;
+      }
+    },
+    listMapLocations: async (_: any, __: any, ctx: any) => {
+      try {
+        return await ctx.geolocation.listMapLocations.execute();
+      } catch (error) {
+        console.warn('Map location list failed:', error);
+        return [];
+      }
     },
     listClientsNeedingGeolocation: async (_: any, __: any, ctx: any) => {
       return ctx.geolocation.listClientsNeedingGeolocation.execute();
@@ -273,9 +310,9 @@ export const resolvers = {
         name: input.name,
         location: input.location,
         status: input.status,
-        latitude: input.coordinates?.latitude,
-        longitude: input.coordinates?.longitude,
-        altitude: input.coordinates?.altitude,
+        ...(input.coordinates
+          ? validateCoordinates(input.coordinates)
+          : {}),
       });
       await ctx.repositories.baseRepo.save(base);
       return base;
@@ -292,9 +329,10 @@ export const resolvers = {
         else if (input.status === 'maintenance') base.setMaintenance();
       }
       if (input.coordinates) {
-        base.latitude = input.coordinates.latitude;
-        base.longitude = input.coordinates.longitude;
-        base.altitude = input.coordinates.altitude;
+        const coordinates = validateCoordinates(input.coordinates);
+        base.latitude = coordinates.latitude;
+        base.longitude = coordinates.longitude;
+        base.altitude = coordinates.altitude;
       }
 
       await ctx.repositories.baseRepo.save(base);
@@ -338,9 +376,9 @@ export const resolvers = {
         baseId: input.baseId,
         sector: input.sector,
         status: input.status,
-        latitude: input.coordinates?.latitude,
-        longitude: input.coordinates?.longitude,
-        altitude: input.coordinates?.altitude,
+        ...(input.coordinates
+          ? validateCoordinates(input.coordinates)
+          : {}),
         azimuth: input.azimuth,
         tilt: input.tilt,
         beamwidth: input.beamwidth,
@@ -360,9 +398,10 @@ export const resolvers = {
         else if (input.status === 'maintenance') accessPoint.setMaintenance();
       }
       if (input.coordinates) {
-        accessPoint.latitude = input.coordinates.latitude;
-        accessPoint.longitude = input.coordinates.longitude;
-        accessPoint.altitude = input.coordinates.altitude;
+        const coordinates = validateCoordinates(input.coordinates);
+        accessPoint.latitude = coordinates.latitude;
+        accessPoint.longitude = coordinates.longitude;
+        accessPoint.altitude = coordinates.altitude;
       }
       if (input.azimuth !== undefined) accessPoint.azimuth = input.azimuth;
       if (input.tilt !== undefined) accessPoint.tilt = input.tilt;
@@ -460,11 +499,7 @@ export const resolvers = {
         accessPointId: input.accessPointId,
         ipAddressId: input.ipAddressId,
         coordinates: input.coordinates
-          ? {
-              latitude: input.coordinates.latitude,
-              longitude: input.coordinates.longitude,
-              altitude: input.coordinates.altitude,
-            }
+          ? validateCoordinates(input.coordinates)
           : undefined,
       });
       await ctx.repositories.clientRepo.save(client);
@@ -478,11 +513,7 @@ export const resolvers = {
       if (input.phoneNumber) client.phoneNumber = input.phoneNumber;
       if (input.clientType) client.clientType = input.clientType;
       if (input.coordinates) {
-        (client as any).coordinates = {
-          latitude: input.coordinates.latitude,
-          longitude: input.coordinates.longitude,
-          altitude: input.coordinates.altitude,
-        };
+        client.coordinates = validateCoordinates(input.coordinates);
       }
 
       await ctx.repositories.clientRepo.save(client);
@@ -515,17 +546,13 @@ export const resolvers = {
       if (!clientId || !clientId.toString().trim()) {
         throw new GraphQLError("Veuillez fournir 'clientId'", { extensions: { code: 'BAD_USER_INPUT' } });
       }
-      if (!coordinates || typeof coordinates.latitude !== 'number' || typeof coordinates.longitude !== 'number') {
-        throw new GraphQLError("Veuillez fournir des coordonnées valides (latitude et longitude)", { extensions: { code: 'BAD_USER_INPUT' } });
-      }
+      const validCoordinates = validateCoordinates(coordinates);
 
       const client = await ctx.repositories.clientRepo.findById(clientId);
       if (!client) throw new Error(`Client with id ${clientId} not found`);
 
-      (client as any).coordinates = {
-        latitude: coordinates.latitude,
-        longitude: coordinates.longitude,
-        altitude: coordinates.altitude,
+      client.coordinates = {
+        ...validCoordinates,
       };
       await ctx.repositories.clientRepo.save(client);
       return client;
@@ -557,17 +584,24 @@ export const resolvers = {
     },
     assignIp: async (_: any, { input }: any, ctx: any) => {
       if (!input) throw new GraphQLError("Veuillez fournir les informations d'assignation", { extensions: { code: 'BAD_USER_INPUT' } });
-      if (!input.clientId && !input.accessPointId) {
-        throw new GraphQLError("Veuillez fournir 'clientId' ou 'accessPointId'", { extensions: { code: 'BAD_USER_INPUT' } });
+      const clientId = normalizeId(input.clientId);
+      const accessPointId = normalizeId(input.accessPointId);
+      const networkId = normalizeId(input.networkId);
+      const ipAddressId = input.ipAddressId
+        ? normalizeId(input.ipAddressId)
+        : undefined;
+      if (!clientId || !accessPointId) {
+        throw new GraphQLError("Veuillez fournir 'clientId' et 'accessPointId'", { extensions: { code: 'BAD_USER_INPUT' } });
       }
-      if (!input.networkId || !input.networkId.toString().trim()) {
+      if (!networkId) {
         throw new GraphQLError("Veuillez remplir le champ 'networkId'", { extensions: { code: 'BAD_USER_INPUT' } });
       }
 
       const dto = {
-        clientId: input.clientId,
-        accessPointId: input.accessPointId,
-        networkId: input.networkId,
+        clientId,
+        accessPointId,
+        networkId,
+        ipAddressId,
       };
       return ctx.ipAllocation.assignIp.execute(dto);
     },
@@ -585,9 +619,7 @@ export const resolvers = {
       const ipAddress = await ctx.repositories.ipAddressRepo.findById(input.ipAddressId);
       if (!ipAddress) throw new Error(`IpAddress with id ${input.ipAddressId} not found`);
 
-      ipAddress.reserved = true;
-      ipAddress.usageType = input.usageType;
-      ipAddress.status = 'reserved';
+      ipAddress.reserve(input.usageType);
 
       await ctx.repositories.ipAddressRepo.save(ipAddress);
       return ipAddress;
@@ -599,8 +631,7 @@ export const resolvers = {
       const ipAddress = await ctx.repositories.ipAddressRepo.findById(input.ipAddressId);
       if (!ipAddress) throw new Error(`IpAddress with id ${input.ipAddressId} not found`);
 
-      ipAddress.status = 'decommissioned';
-      ipAddress.active = false;
+      ipAddress.decommission();
 
       await ctx.repositories.ipAddressRepo.save(ipAddress);
       return ipAddress;
@@ -627,16 +658,22 @@ export const resolvers = {
     },
     createCpeDevice: async (_: any, { input }: any, ctx: any) => {
       if (!input) throw new GraphQLError("Veuillez fournir les informations du CPE", { extensions: { code: 'BAD_USER_INPUT' } });
-      return ctx.signalMonitoring.createCpeDevice.execute(input);
+      return ctx.signalMonitoring.createCpeDevice.execute({
+        ...input,
+        coordinates: input.coordinates
+          ? validateCoordinates(input.coordinates)
+          : undefined,
+      });
     },
     updateCpeLocation: async (_: any, { id, coordinates, azimuth }: any, ctx: any) => {
       if (!id || !id.toString().trim()) {
         throw new GraphQLError("Veuillez fournir 'id'", { extensions: { code: 'BAD_USER_INPUT' } });
       }
-      if (!coordinates || typeof coordinates.latitude !== 'number' || typeof coordinates.longitude !== 'number') {
-        throw new GraphQLError("Veuillez fournir des coordonnées valides (latitude et longitude)", { extensions: { code: 'BAD_USER_INPUT' } });
-      }
-      return ctx.signalMonitoring.updateCpeLocation.execute({ id, coordinates, azimuth });
+      return ctx.signalMonitoring.updateCpeLocation.execute({
+        id: normalizeId(id),
+        coordinates: validateCoordinates(coordinates),
+        azimuth,
+      });
     },
     recordSignalMetric: async (_: any, { input }: any, ctx: any) => {
       if (!input) throw new GraphQLError("Veuillez fournir les métriques du signal", { extensions: { code: 'BAD_USER_INPUT' } });
@@ -679,6 +716,20 @@ export const resolvers = {
   },
   IpAssignment: {
     id: (a: any) => `ia${a.id}`,
+  },
+  MapLocation: {
+    id: (location: any) => {
+      const prefixes: Record<string, string> = {
+        base: 'bas',
+        accessPoint: 'ap',
+        client: 'cli',
+        cpe: 'cpe',
+      };
+      return `${prefixes[location.kind]}${location.id}`;
+    },
+  },
+  NearestAccessPointAtPosition: {
+    accessPointId: (result: any) => `ap${result.accessPointId}`,
   },
   FieldReport: {
     distanceMeters: (report: any) => report.distanceMeters ?? report.latestSignal?.distance ?? null,

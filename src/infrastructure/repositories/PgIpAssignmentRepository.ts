@@ -62,6 +62,7 @@ export class PgIpAssignmentRepository implements IpAssignmentRepository {
       id: row.id,
       ipAddressId: row.ipAddressId,
       clientId: row.clientId,
+      accessPointId: row.accessPointId,
       status: row.status,
       assignedAt: row.assignedAt,
       releasedAt: row.releasedAt,

@@ -39,10 +39,10 @@ export class AccessPoint extends Entity<string> {
     if (!params.managementIpId) throw new Error('AccessPoint must reference a management IP');
     if (!params.baseId) throw new Error('AccessPoint must belong to a base');
     if (!params.sector.trim()) throw new Error('AccessPoint sector is required');
-    if (params.latitude !== undefined && (params.latitude < -90 || params.latitude > 90)) {
+    if (params.latitude !== undefined && (!Number.isFinite(params.latitude) || params.latitude < -90 || params.latitude > 90)) {
       throw new Error('AccessPoint latitude must be between -90 and 90');
     }
-    if (params.longitude !== undefined && (params.longitude < -180 || params.longitude > 180)) {
+    if (params.longitude !== undefined && (!Number.isFinite(params.longitude) || params.longitude < -180 || params.longitude > 180)) {
       throw new Error('AccessPoint longitude must be between -180 and 180');
     }
 

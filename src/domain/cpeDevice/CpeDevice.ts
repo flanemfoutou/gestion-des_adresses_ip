@@ -36,8 +36,8 @@ export class CpeDevice extends Entity<string> {
 
     if (params.coordinates) {
       const { latitude, longitude } = params.coordinates;
-      if (latitude < -90 || latitude > 90) throw new Error('Latitude du CPE invalide');
-      if (longitude < -180 || longitude > 180) throw new Error('Longitude du CPE invalide');
+      if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) throw new Error('Latitude du CPE invalide');
+      if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) throw new Error('Longitude du CPE invalide');
     }
 
     this.clientId = params.clientId;

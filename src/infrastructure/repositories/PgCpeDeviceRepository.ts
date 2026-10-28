@@ -61,8 +61,8 @@ export class PgCpeDeviceRepository implements CpeDeviceRepository {
       macAddress: row.macAddress,
       coordinates,
       azimuth: row.azimuth !== null ? Number(row.azimuth) : undefined,
-      createdAt: new Date(row.createdAt),
-      updatedAt: new Date(row.updatedAt),
+      createdAt: row.createdAt ?? undefined,
+      updatedAt: row.updatedAt ?? undefined,
     });
   }
 }

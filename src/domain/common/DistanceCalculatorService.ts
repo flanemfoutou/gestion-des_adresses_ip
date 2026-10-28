@@ -23,9 +23,10 @@ export class DistanceCalculatorService {
     const lat1 = this.toRad(from.latitude);
     const lat2 = this.toRad(to.latitude);
 
-    const a =
+    const rawA =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
+    const a = Math.min(1, Math.max(0, rawA));
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;

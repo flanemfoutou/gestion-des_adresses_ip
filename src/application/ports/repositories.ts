@@ -32,22 +32,49 @@ export interface ClientRepository {
   findByAccessPointId(accessPointId: string): Promise<Client[]>;
   search(query: string, limit?: number, offset?: number): Promise<Client[]>;
   save(client: Client): Promise<void>;
-  delete(id: string): Promise<Network | null>;
+  delete(id: string): Promise<Client | null>;
 }
+
+export type NetworkIpStats = {
+  networkId: string;
+  total: number;
+  free: number;
+  occupied: number;
+  reserved: number;
+};
 
 export interface IpAddressRepository {
   findById(id: string): Promise<IpAddress | null>;
   findByAddress(address: string): Promise<IpAddress | null>;
-  findAvailableByNetwork(networkId: string, limit?: number, offset?: number): Promise<IpAddress[]>;
-  findByStatus(status: string, limit?: number, offset?: number): Promise<IpAddress[]>;
-  findByNetworkId(networkId: string, limit?: number, offset?: number): Promise<IpAddress[]>;
+  findAvailableByNetwork(
+    networkId: string,
+    limit?: number,
+    offset?: number,
+  ): Promise<IpAddress[]>;
+  findByStatus(
+    status: string,
+    limit?: number,
+    offset?: number,
+  ): Promise<IpAddress[]>;
+  findByNetworkId(
+    networkId: string,
+    limit?: number,
+    offset?: number,
+  ): Promise<IpAddress[]>;
   countAvailableByNetwork(networkId: string): Promise<number>;
   countByStatus(status: string): Promise<number>;
   countByNetworkId(networkId: string): Promise<number>;
   /**
    * Return aggregated ip stats for a network
    */
-  getNetworkStats(networkId: string): Promise<{ total: number; free: number; occupied: number; reserved: number }>;
+  getNetworkStats(networkId: string): Promise<{
+    total: number;
+    free: number;
+    occupied: number;
+    reserved: number;
+    decommissioned: number;
+  }>;
+  getStatsByNetwork(): Promise<NetworkIpStats[]>;
   save(ipAddress: IpAddress): Promise<void>;
 }
 
@@ -61,7 +88,11 @@ export interface CpeDeviceRepository {
 
 export interface SignalMetricRepository {
   findById(id: string): Promise<SignalMetric | null>;
-  findByCpeId(cpeId: string, limit?: number, offset?: number): Promise<SignalMetric[]>;
+  findByCpeId(
+    cpeId: string,
+    limit?: number,
+    offset?: number,
+  ): Promise<SignalMetric[]>;
   findLatestByCpeId(cpeId: string): Promise<SignalMetric | null>;
   save(signalMetric: SignalMetric): Promise<void>;
 }
@@ -72,7 +103,7 @@ export interface NetworkRepository {
   findByAccessPointId(accessPointId: string): Promise<Network[]>;
   findAll(): Promise<Network[]>;
   save(network: Network): Promise<void>;
-  delete(id: string): Promise<Client | null>;
+  delete(id: string): Promise<Network | null>;
 }
 
 export interface IpAssignmentRepository {

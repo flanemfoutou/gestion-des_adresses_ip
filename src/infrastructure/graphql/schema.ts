@@ -95,6 +95,29 @@ export const typeDefs = `
     hasCoordinates: Boolean!
   }
 
+  enum MapEntityKind { base accessPoint client cpe }
+
+  type MapLocation {
+    id: ID!
+    kind: MapEntityKind!
+    name: String!
+    parentName: String
+    address: String
+    latitude: Float
+    longitude: Float
+    altitude: Float
+    azimuth: Float
+  }
+
+  type NearestAccessPointAtPosition {
+    accessPointId: ID!
+    accessPointName: String!
+    baseName: String!
+    distanceMeters: Float!
+    latitude: Float!
+    longitude: Float!
+  }
+
   type IpAssignment {
     id: ID!
     ipAddressId: ID!
@@ -276,6 +299,7 @@ export const typeDefs = `
     clientId: ID!
     accessPointId: ID!
     networkId: ID!
+    ipAddressId: ID
   }
 
   input ReserveIpInput {
@@ -353,7 +377,9 @@ export const typeDefs = `
     ipAssignmentHistory(ipAddressId: ID!): [IpAssignment!]!
 
     findClientsNearAccessPoint(accessPointId: ID!, maxDistance: Int = 100): [ClientWithDistance!]!
-    findNearestAccessPoint(clientId: ID!): NearestAccessPoint!
+    findNearestAccessPoint(clientId: ID!): NearestAccessPoint
+    findNearestAccessPointAtPosition(coordinates: CoordinatesInput!): NearestAccessPointAtPosition
+    listMapLocations: [MapLocation!]!
     listClientsNeedingGeolocation: [ClientGeolocationStatus!]!
   }
 

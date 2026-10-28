@@ -27,10 +27,10 @@ export class Base extends Entity<string> {
     super(params.id);
     if (!params.name.trim()) throw new Error('Base name is required');
     if (!params.location.trim()) throw new Error('Base location is required');
-    if (params.latitude !== undefined && (params.latitude < -90 || params.latitude > 90)) {
+    if (params.latitude !== undefined && (!Number.isFinite(params.latitude) || params.latitude < -90 || params.latitude > 90)) {
       throw new Error('Base latitude must be between -90 and 90');
     }
-    if (params.longitude !== undefined && (params.longitude < -180 || params.longitude > 180)) {
+    if (params.longitude !== undefined && (!Number.isFinite(params.longitude) || params.longitude < -180 || params.longitude > 180)) {
       throw new Error('Base longitude must be between -180 and 180');
     }
 

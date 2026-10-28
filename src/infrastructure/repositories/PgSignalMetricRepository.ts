@@ -70,7 +70,7 @@ export class PgSignalMetricRepository implements SignalMetricRepository {
       quality: row.quality,
       distance: row.distance !== null ? Number(row.distance) : undefined,
       measuredAt: new Date(row.measuredAt),
-      createdAt: new Date(row.createdAt),
+      createdAt: row.createdAt ?? undefined,
     });
   }
 }
