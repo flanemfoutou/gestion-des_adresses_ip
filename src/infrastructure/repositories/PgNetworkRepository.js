@@ -9,6 +9,12 @@ export class PgNetworkRepository {
             return null;
         return this.toDomain(rows[0]);
     }
+    async findByCidr(cidr) {
+        const rows = await db.select().from(networks).where(and(eq(networks.cidr, cidr), isNull(networks.deletedAt))).limit(1);
+        if (!rows[0])
+            return null;
+        return this.toDomain(rows[0]);
+    }
     async findByAccessPointId(accessPointId) {
         const rows = await db.select().from(networks).where(and(eq(networks.accessPointId, accessPointId), isNull(networks.deletedAt)));
         return rows.map(row => this.toDomain(row));

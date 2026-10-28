@@ -1,4 +1,4 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '@/infrastructure/db/neon';
 import { bases } from '@/infrastructure/db/schema';
 import { Base } from '@/domain/base/Base';
@@ -12,6 +12,22 @@ export class PgBaseRepository {
     async findAll() {
         const rows = await db.select().from(bases).where(isNull(bases.deletedAt)).orderBy(bases.name);
         return rows.map(row => this.toDomain(row));
+    }
+    async findByName(name) {
+        const rows = await db.select().from(bases).where(and(eq(bases.name, name), isNull(bases.deletedAt))).limit(1);
+        if (!rows[0])
+            return null;
+        return this.toDomain(rows[0]);
+    }
+    async findByNameAndLocation(name, location) {
+        const rows = await db
+            .select()
+            .from(bases)
+            .where(sql `lower(trim(${bases.name})) = lower(trim(${name})) AND lower(trim(${bases.location})) = lower(trim(${location})) AND ${bases.deletedAt} IS NULL`)
+            .limit(1);
+        if (!rows[0])
+            return null;
+        return this.toDomain(rows[0]);
     }
     async save(base) {
         const record = {

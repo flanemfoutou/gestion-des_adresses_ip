@@ -25,6 +25,16 @@ export class Base extends Entity {
         this.altitude = params.altitude;
         this._status = params.status ?? 'active';
     }
+    get coordinates() {
+        if (this.latitude !== undefined && this.longitude !== undefined) {
+            return {
+                latitude: this.latitude,
+                longitude: this.longitude,
+                altitude: this.altitude,
+            };
+        }
+        return undefined;
+    }
     get status() {
         return this._status;
     }

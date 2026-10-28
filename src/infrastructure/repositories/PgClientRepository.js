@@ -9,15 +9,31 @@ export class PgClientRepository {
             return null;
         return this.toDomain(rows[0]);
     }
+    async findAll() {
+        const rows = await db.select().from(clients).where(isNull(clients.deletedAt));
+        return rows.map(row => this.toDomain(row));
+    }
     async findByAccessPointId(accessPointId) {
         const rows = await db.select().from(clients).where(and(eq(clients.accessPointId, accessPointId), isNull(clients.deletedAt)));
         return rows.map(row => this.toDomain(row));
+    }
+    async findByIpAddressId(ipAddressId) {
+        const rows = await db.select().from(clients).where(and(eq(clients.ipAddressId, ipAddressId), isNull(clients.deletedAt))).limit(1);
+        if (!rows[0])
+            return null;
+        return this.toDomain(rows[0]);
+    }
+    async findByPhoneNumber(phone) {
+        const rows = await db.select().from(clients).where(and(eq(clients.phoneNumber, phone), isNull(clients.deletedAt))).limit(1);
+        if (!rows[0])
+            return null;
+        return this.toDomain(rows[0]);
     }
     async search(query, limit = 20, offset = 0) {
         const rows = await db
             .select()
             .from(clients)
-            .where(and(isNull(clients.deletedAt), or(ilike(clients.fullName, `%${query}%`), ilike(clients.phoneNumber, `%${query}%`))))
+            .where(or(and(isNull(clients.deletedAt), or(ilike(clients.fullName, `%${query}%`), ilike(clients.phoneNumber, `%${query}%`)))))
             .limit(limit)
             .offset(offset);
         return rows.map(row => this.toDomain(row));
@@ -30,6 +46,9 @@ export class PgClientRepository {
             clientType: client.clientType,
             accessPointId: client.accessPointId,
             ipAddressId: client.ipAddressId,
+            latitude: client.coordinates?.latitude ?? null,
+            longitude: client.coordinates?.longitude ?? null,
+            altitude: client.coordinates?.altitude ?? null,
         };
         await db
             .insert(clients)
@@ -51,6 +70,13 @@ export class PgClientRepository {
             clientType: row.clientType,
             accessPointId: row.accessPointId,
             ipAddressId: row.ipAddressId,
+            coordinates: row.latitude !== null && row.longitude !== null
+                ? {
+                    latitude: Number(row.latitude),
+                    longitude: Number(row.longitude),
+                    altitude: row.altitude !== null ? Number(row.altitude) : undefined,
+                }
+                : undefined,
         });
     }
 }

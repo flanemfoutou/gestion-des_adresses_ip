@@ -23,6 +23,10 @@ export class PgAccessPointRepository {
         const rows = await db.select().from(accessPoints).where(eq(accessPoints.baseId, baseId));
         return rows.map(row => this.toDomain(row));
     }
+    async findAll() {
+        const rows = await db.select().from(accessPoints);
+        return rows.map(row => this.toDomain(row));
+    }
     async save(accessPoint) {
         const record = {
             id: accessPoint.id,

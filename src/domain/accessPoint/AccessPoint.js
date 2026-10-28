@@ -39,6 +39,16 @@ export class AccessPoint extends Entity {
         this.beamwidth = params.beamwidth;
         this._status = params.status ?? 'online';
     }
+    get coordinates() {
+        if (this.latitude !== undefined && this.longitude !== undefined) {
+            return {
+                latitude: this.latitude,
+                longitude: this.longitude,
+                altitude: this.altitude,
+            };
+        }
+        return undefined;
+    }
     get status() {
         return this._status;
     }

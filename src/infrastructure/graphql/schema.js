@@ -70,7 +70,7 @@ export const typeDefs = `
     ipAddressId: ID!
     coordinates: Coordinates
   }
-  
+
   type ClientWithDistance {
     clientId: ID!
     clientName: String!
@@ -351,6 +351,7 @@ export const typeDefs = `
     getCurrentSignal(cpeId: ID!): SignalMetric
 
     ipAssignmentHistory(ipAddressId: ID!): [IpAssignment!]!
+
     findClientsNearAccessPoint(accessPointId: ID!, maxDistance: Int = 100): [ClientWithDistance!]!
     findNearestAccessPoint(clientId: ID!): NearestAccessPoint!
     listClientsNeedingGeolocation: [ClientGeolocationStatus!]!

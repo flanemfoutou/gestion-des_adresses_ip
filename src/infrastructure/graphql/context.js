@@ -18,6 +18,7 @@ import { GetSignalHistoryUseCase } from '@/application/usecases/GetSignalHistory
 import { GetCurrentSignalUseCase } from '@/application/usecases/GetCurrentSignalUseCase';
 import { GetFieldReportUseCase } from '@/application/usecases/GetFieldReportUseCase';
 import { ListCpesNeedingRealignmentUseCase } from '@/application/usecases/ListCpesNeedingRealignmentUseCase';
+import { FindClientsNearAccessPointUseCase, FindNearestAccessPointUseCase, ListClientsNeedingGeolocationUseCase, } from '@/application/usecases/GeolocalizationUseCases';
 export function createContext({ request }) {
     const baseRepo = new PgBaseRepository();
     const ipAddressRepo = new PgIpAddressRepository();
@@ -46,6 +47,11 @@ export function createContext({ request }) {
             getCurrentSignal: new GetCurrentSignalUseCase(signalMonitoringService),
             getFieldReport: new GetFieldReportUseCase(signalMonitoringService),
             listCpesNeedingRealignment: new ListCpesNeedingRealignmentUseCase(signalMonitoringService),
+        },
+        geolocation: {
+            findClientsNearAccessPoint: new FindClientsNearAccessPointUseCase(clientRepo, accessPointRepo),
+            findNearestAccessPoint: new FindNearestAccessPointUseCase(clientRepo, accessPointRepo, baseRepo),
+            listClientsNeedingGeolocation: new ListClientsNeedingGeolocationUseCase(clientRepo),
         },
         repositories: {
             baseRepo,

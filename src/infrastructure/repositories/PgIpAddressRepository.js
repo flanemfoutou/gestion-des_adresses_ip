@@ -81,6 +81,28 @@ export class PgIpAddressRepository {
             .values(record)
             .onConflictDoUpdate({ target: ipAddresses.id, set: record });
     }
+    async getNetworkStats(networkId) {
+        const rows = await db
+            .select({ status: ipAddresses.status, count: sql `count(*)` })
+            .from(ipAddresses)
+            .where(eq(ipAddresses.networkId, networkId))
+            .groupBy(ipAddresses.status);
+        let total = 0;
+        let free = 0;
+        let occupied = 0;
+        let reserved = 0;
+        for (const row of rows) {
+            const c = Number(row.count ?? 0);
+            total += c;
+            if (row.status === 'free')
+                free = c;
+            else if (row.status === 'occupied')
+                occupied = c;
+            else if (row.status === 'reserved')
+                reserved = c;
+        }
+        return { total, free, occupied, reserved };
+    }
     toDomain(row) {
         return new IpAddress({
             id: row.id,
