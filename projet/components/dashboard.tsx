@@ -38,20 +38,18 @@ import type { WorkspacePage } from "@/app/page";
 
 const navigation: Array<{
   label: string;
-  href: string;
   icon: typeof LayoutDashboard;
   page: WorkspacePage;
 }> = [
   {
     label: "Vue d’ensemble",
-    href: "#overview",
     icon: LayoutDashboard,
     page: "overview",
   },
-  { label: "Sites & équipements", href: "#sites", icon: MapPin, page: "bases" },
-  { label: "Réseaux", href: "#inventory", icon: Network, page: "networks" },
-  { label: "Clients", href: "#clients", icon: UserRound, page: "clients" },
-  { label: "Adresses IP", href: "#ips", icon: Globe2, page: "ips" },
+  { label: "Sites & équipements", icon: MapPin, page: "bases" },
+  { label: "Réseaux", icon: Network, page: "networks" },
+  { label: "Clients", icon: UserRound, page: "clients" },
+  { label: "Adresses IP", icon: Globe2, page: "ips" },
 ];
 
 const numberFormat = new Intl.NumberFormat("fr-FR");
@@ -110,8 +108,10 @@ function StatCard({
 }
 
 export function Dashboard({
+  currentPage,
   onNavigate,
 }: {
+  currentPage: WorkspacePage;
   onNavigate: (page: WorkspacePage) => void;
 }) {
   const { data, loading, error, refetch, networkStatus } =
@@ -145,6 +145,18 @@ export function Dashboard({
     Math.min(100, stats?.utilizationPercentage ?? 0),
   );
   const connected = Boolean(data?.health);
+  const capacityMessage =
+    !stats
+      ? "Chargement des derniers indicateurs réseau…"
+      : utilization >= 80
+        ? "La capacité IP est élevée : une refonte de planification est recommandée."
+        : utilization >= 50
+          ? "Le réseau est bien équilibré, avec une marge de croissance encore saine."
+          : "Le réseau est sous tension maîtrisée, avec de la marge pour l’évolution.";
+  const operationalMessage =
+    !stats
+      ? "Synchronisation des services…"
+      : `${formatNumber(stats.totalNetworks)} réseaux surveillés, ${formatNumber(stats.totalFreeIps)} adresses libres et ${formatNumber(stats.totalUsedIps)} déjà assignées.`;
 
   async function handleCreateBase(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -169,7 +181,12 @@ export function Dashboard({
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <a className="brand" href="#overview" aria-label="Cambium, accueil">
+        <button
+          type="button"
+          className="brand"
+          aria-label="Cambium, accueil"
+          onClick={() => onNavigate("overview")}
+        >
           <span className="brand-mark">
             <Command size={19} strokeWidth={2.4} />
           </span>
@@ -178,52 +195,52 @@ export function Dashboard({
             <small>NETWORK CONTROL</small>
           </span>
           <ChevronDown className="brand-chevron" size={15} />
-        </a>
+        </button>
 
         <div className="workspace-label">ESPACE DE TRAVAIL</div>
         <nav className="side-nav" aria-label="Navigation principale">
-          {navigation.map(({ label, href, icon: Icon, page }, index) => (
-            <a
-              key={href}
-              className={`nav-link ${index === 0 ? "selected" : ""}`}
-              href={href}
-              onClick={(event) => {
-                if (page !== "overview") {
-                  event.preventDefault();
-                  onNavigate(page);
-                }
-              }}
+          {navigation.map(({ label, icon: Icon, page }, index) => (
+            <button
+              key={label}
+              type="button"
+              className={`nav-link ${page === currentPage ? "selected" : ""}`}
+              onClick={() => onNavigate(page)}
             >
               <Icon size={17} strokeWidth={1.8} />
               <span>{label}</span>
               {page === "bases" && (
                 <span className="nav-count">{bases.length || "—"}</span>
               )}
-            </a>
+            </button>
           ))}
         </nav>
 
         <div className="workspace-label infra-label">INFRASTRUCTURE</div>
         <div className="infra-list">
-          <a
+          <button
+            type="button"
             className="nav-link"
-            href="#sites"
-            onClick={(event) => {
-              event.preventDefault();
-              onNavigate("bases");
-            }}
+            onClick={() => onNavigate("bases")}
           >
             <Server size={17} strokeWidth={1.8} />
             <span>Points d’accès</span>
-          </a>
-          <a className="nav-link" href="#inventory">
+          </button>
+          <button
+            type="button"
+            className="nav-link"
+            onClick={() => onNavigate("networks")}
+          >
             <Boxes size={17} strokeWidth={1.8} />
             <span>Réseaux & VLAN</span>
-          </a>
-          <a className="nav-link" href="#inventory">
+          </button>
+          <button
+            type="button"
+            className="nav-link"
+            onClick={() => onNavigate("clients")}
+          >
             <Signal size={17} strokeWidth={1.8} />
             <span>Qualité du signal</span>
-          </a>
+          </button>
         </div>
 
         <div className="sidebar-bottom">
@@ -330,6 +347,14 @@ export function Dashboard({
               </Button>
             </div>
           )}
+
+          <div className="dashboard-insight" aria-live="polite">
+            <span className="insight-pill">
+              {connected ? "Système stable" : "Diagnostic en cours"}
+            </span>
+            <strong>{operationalMessage}</strong>
+            <span>{capacityMessage}</span>
+          </div>
 
           <section className="stats-grid" aria-label="Statistiques réseau">
             <StatCard
@@ -638,9 +663,13 @@ export function Dashboard({
                   Affichage de <strong>{filteredBases.length}</strong> site
                   {filteredBases.length > 1 ? "s" : ""}
                 </span>
-                <a href="#inventory">
+                <button
+                  type="button"
+                  className="table-footer-link"
+                  onClick={() => onNavigate("networks")}
+                >
                   Vue de l’infrastructure <ArrowUpRight size={13} />
-                </a>
+                </button>
               </div>
             </Card>
           </section>

@@ -502,14 +502,26 @@ export function ManagementWorkspace({
         "Le réseau a été créé.",
       );
     } else if (dialog.kind === "client") {
+      const record = dialog.record;
+      const clientAccessPointId =
+        value("accessPointId") || selectedAccessPoint || accessPoints[0]?.id || "";
+      const clientIpId = value("ipAddressId") || availableIps[0]?.id || "";
+
+      if (!record && !selectedNetwork) {
+        throw new Error("Sélectionnez un réseau pour créer un client et lui attribuer une IP.");
+      }
+      if (!clientAccessPointId) {
+        throw new Error("Sélectionnez un point d’accès avant de créer le client.");
+      }
+
       const input = {
         fullName: value("fullName"),
         phoneNumber: value("phoneNumber"),
         clientType: value("clientType") as ClientType,
-        accessPointId: toBackendId(selectedAccessPoint),
-        ipAddressId: toBackendId(value("ipAddressId")),
+        accessPointId: toBackendId(clientAccessPointId),
+        ipAddressId: toBackendId(clientIpId),
       };
-      const record = dialog.record;
+
       if (record)
         await runMutation(async () => {
           await updateClient({
@@ -539,6 +551,10 @@ export function ManagementWorkspace({
         }, "Le client a été mis à jour.");
       else
         await runMutation(async () => {
+          if (!input.ipAddressId) {
+            throw new Error("Aucune adresse IP disponible pour ce réseau. Créez d’abord une IP libre ou sélectionnez un réseau avec des adresses disponibles.");
+          }
+
           const result = await createClient({ variables: { input } });
           const client = result.data?.createClient;
           if (!client) {
@@ -635,6 +651,63 @@ export function ManagementWorkspace({
     ips: { label: "Ajouter une IP", kind: "ip" },
     map: { label: "Carte", kind: "base" },
   };
+
+  function openCreateDialogForCurrentPage() {
+    if (page === "bases") {
+      setDialog({ kind: "base" });
+      return;
+    }
+
+    if (!selectedBase && !bases.length) {
+      setDialog({ kind: "base" });
+      return;
+    }
+    if (!selectedBase && bases.length) setSelectedBase(bases[0].id);
+
+    if (page === "networks") {
+      if (!selectedAccessPoint) {
+        if (accessPoints.length) setSelectedAccessPoint(accessPoints[0].id);
+        else {
+          setDialog({ kind: "accessPoint" });
+          return;
+        }
+      }
+      setDialog({ kind: "network" });
+      return;
+    }
+
+    if (page === "clients") {
+      if (!selectedAccessPoint) {
+        if (accessPoints.length) setSelectedAccessPoint(accessPoints[0].id);
+        else {
+          setDialog({ kind: "accessPoint" });
+          return;
+        }
+      }
+      setDialog({ kind: "client" });
+      return;
+    }
+
+    if (page === "ips") {
+      if (!selectedAccessPoint && accessPoints.length)
+        setSelectedAccessPoint(accessPoints[0].id);
+      if (!selectedAccessPoint) {
+        setDialog({ kind: "accessPoint" });
+        return;
+      }
+      if (!selectedNetwork) {
+        if (networks.length) setSelectedNetwork(networks[0].id);
+        else {
+          setDialog({ kind: "network" });
+          return;
+        }
+      }
+      setDialog({ kind: "ip" });
+      return;
+    }
+
+    setDialog({ kind: pageActions[page].kind } as DialogState);
+  }
 
   return (
     <div className="management-workspace">
@@ -886,14 +959,7 @@ export function ManagementWorkspace({
             <Button
               size="sm"
               className="add-button"
-              disabled={
-                (page === "networks" && !selectedAccessPoint) ||
-                (page === "ips" && !selectedNetwork) ||
-                (page === "clients" && !selectedAccessPoint)
-              }
-              onClick={() =>
-                setDialog({ kind: pageActions[page].kind } as DialogState)
-              }
+              onClick={openCreateDialogForCurrentPage}
             >
               <Plus size={14} />
               {pageActions[page].label}
@@ -1484,44 +1550,45 @@ export function ManagementWorkspace({
                       <option value="iot">IoT</option>
                     </SelectInput>
                   </Field>
-                  {dialog.record && (
-                    <Field label="Point d’accès">
-                      <SelectInput
-                        name="accessPointId"
-                        defaultValue={dialog.record.accessPointId}
-                      >
-                        {accessPoints.map((ap) => (
-                          <option key={ap.id} value={ap.id}>
-                            {ap.name}
-                          </option>
-                        ))}
-                      </SelectInput>
-                    </Field>
-                  )}
+                  <Field label="Point d’accès">
+                    <SelectInput
+                      name="accessPointId"
+                      defaultValue={dialog.record?.accessPointId ?? selectedAccessPoint ?? ""}
+                      disabled={!accessPoints.length}
+                    >
+                      <option value="">
+                        {accessPoints.length
+                          ? "Sélectionner un point d’accès"
+                          : "Aucun point d’accès disponible"}
+                      </option>
+                      {accessPoints.map((ap) => (
+                        <option key={ap.id} value={ap.id}>
+                          {ap.name}
+                        </option>
+                      ))}
+                    </SelectInput>
+                  </Field>
                   {!dialog.record && (
                     <Field label="Adresse IP disponible">
                       <SelectInput
                         name="ipAddressId"
                         required
-                        defaultValue=""
-                        disabled={availableIpsQuery.loading || !!availableIpsQuery.error}
+                        defaultValue={availableIps[0]?.id ?? ""}
+                        disabled={
+                          availableIpsQuery.loading ||
+                          !!availableIpsQuery.error ||
+                          !availableIps.length
+                        }
                       >
-                        <option value="">Sélectionner une IP</option>
-                        {availableIpsQuery.loading && (
-                          <option disabled>Chargement des adresses IP…</option>
-                        )}
-                        {availableIpsQuery.error && (
-                          <option disabled>
-                            Impossible de charger les adresses disponibles.
-                          </option>
-                        )}
-                        {!availableIpsQuery.loading &&
-                          !availableIpsQuery.error &&
-                          !availableIps.length && (
-                            <option disabled>
-                              Aucune adresse IP disponible sur ce réseau.
-                            </option>
-                          )}
+                        <option value="">
+                          {availableIpsQuery.loading
+                            ? "Chargement des adresses IP…"
+                            : availableIpsQuery.error
+                              ? "Impossible de charger les adresses disponibles."
+                              : !availableIps.length
+                                ? "Aucune adresse IP disponible sur ce réseau."
+                                : "Sélectionner une IP"}
+                        </option>
                         {availableIps.map((ip) => (
                           <option key={ip.id} value={toBackendId(ip.id)}>
                             {ip.address}
